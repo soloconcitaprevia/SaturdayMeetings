@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lock } from 'lucide-react';
+import { Lock, Clock } from 'lucide-react';
 
 const generateInitialSlots = (currentDate: Date): AppointmentSlot[] => {
   const slots: AppointmentSlot[] = [];
@@ -32,7 +32,7 @@ const generateInitialSlots = (currentDate: Date): AppointmentSlot[] => {
 
 
 export default function HomePage() {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [appointmentSlots, setAppointmentSlots] = useState<AppointmentSlot[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
@@ -124,12 +124,26 @@ export default function HomePage() {
   return (
     <AppLayout>
       <div className="space-y-8 md:space-y-12">
-        <CalendarDisplay
-          slots={appointmentSlots}
-          selectedSlotId={selectedSlotId}
-          onSlotSelect={handleSlotSelect}
-          currentDate={currentDate}
-        />
+        {currentDate ? (
+          <CalendarDisplay
+            slots={appointmentSlots}
+            selectedSlotId={selectedSlotId}
+            onSlotSelect={handleSlotSelect}
+            currentDate={currentDate}
+          />
+        ) : (
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                <Clock className="h-6 w-6 text-primary" />
+                Loading calendar...
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Initializing available slots...</p>
+            </CardContent>
+          </Card>
+        )}
         
         <Separator />
 
