@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -9,6 +10,10 @@ import type { AppointmentSlot, Booking, BookingFormData } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { format, addMinutes, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Lock } from 'lucide-react';
 
 const generateInitialSlots = (currentDate: Date): AppointmentSlot[] => {
   const slots: AppointmentSlot[] = [];
@@ -17,15 +22,11 @@ const generateInitialSlots = (currentDate: Date): AppointmentSlot[] => {
   for (let i = 0; i < 16; i++) { // 8 hours of slots, 30 min intervals (9 AM to 5 PM, 16 slots)
     const slotTime = addMinutes(startTime, i * 30);
     slots.push({
-      id: `slot-${i + 1}-${currentDate.getTime()}`, // Add timestamp to ID for potential future date changes
+      id: `slot-${i + 1}-${currentDate.getTime()}`,
       dateTime: slotTime,
       isBooked: false,
     });
   }
-  // Pre-book one slot for demonstration if desired
-  // if (slots.length > 2) {
-  //   slots[2].isBooked = true;
-  // }
   return slots;
 };
 
@@ -38,9 +39,11 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  const [isBookingListUnlocked, setIsBookingListUnlocked] = useState(false);
+  const [enteredPassword, setEnteredPassword] = useState('');
+
   useEffect(() => {
     const today = new Date();
-    // Ensure currentDate is set to today without time, to avoid re-generating slots on minor time changes
     const startOfToday = setMilliseconds(setSeconds(setMinutes(setHours(today, 0), 0), 0), 0);
     setCurrentDate(startOfToday);
     setAppointmentSlots(generateInitialSlots(startOfToday));
@@ -72,7 +75,6 @@ export default function HomePage() {
     }
     setIsLoading(true);
     
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     setAppointmentSlots(prevSlots =>
@@ -101,6 +103,24 @@ export default function HomePage() {
     });
   };
 
+  const handlePasswordSubmit = () => {
+    if (enteredPassword === '1') {
+      setIsBookingListUnlocked(true);
+      toast({
+        title: "Access Granted",
+        description: "You can now see the list of bookings.",
+        variant: "default",
+      });
+    } else {
+      toast({
+        title: "Access Denied",
+        description: "Incorrect password. Please try again.",
+        variant: "destructive",
+      });
+      setEnteredPassword(''); 
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-8 md:space-y-12">
@@ -121,7 +141,39 @@ export default function HomePage() {
         
         <Separator />
 
-        <BookingList bookings={bookings} />
+        {isBookingListUnlocked ? (
+          <BookingList bookings={bookings} />
+        ) : (
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                <Lock className="h-6 w-6 text-primary" />
+                View Bookings
+              </CardTitle>
+              <CardDescription>
+                This section is password protected. Please enter the password to view all bookings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex w-full max-w-sm items-center space-x-2">
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={enteredPassword}
+                  onChange={(e) => setEnteredPassword(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handlePasswordSubmit();
+                    }
+                  }}
+                />
+                <Button type="button" onClick={handlePasswordSubmit}>
+                  Unlock
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppLayout>
   );
