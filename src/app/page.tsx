@@ -3,26 +3,27 @@
 
 import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/app-layout';
-import { CalendarDisplay } from '@/components/booking/calendar-display';
+import { Calendar } from "@/components/ui/calendar"; // ShadCN Calendar
+import { CalendarDisplay } from '@/components/booking/calendar-display'; // For slots
 import { BookingForm } from '@/components/booking/booking-form';
 import { BookingList } from '@/components/booking/booking-list';
 import type { AppointmentSlot, Booking, BookingFormData } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
-import { format, addMinutes, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
+import { format, addMinutes, setHours, setMinutes, setSeconds, setMilliseconds, startOfDay } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lock, Clock } from 'lucide-react';
+import { Lock, Clock, CalendarDays as CalendarIcon } from 'lucide-react';
 
-const generateInitialSlots = (currentDate: Date): AppointmentSlot[] => {
+const generateSlotsForDate = (date: Date): AppointmentSlot[] => {
   const slots: AppointmentSlot[] = [];
-  const startTime = setMilliseconds(setSeconds(setMinutes(setHours(currentDate, 9), 0), 0), 0); // Today at 9:00:00.000 AM
+  const startTime = setMilliseconds(setSeconds(setMinutes(setHours(date, 9), 0), 0), 0); // Selected date at 9:00:00.000 AM
 
   for (let i = 0; i < 16; i++) { // 8 hours of slots, 30 min intervals (9 AM to 5 PM, 16 slots)
     const slotTime = addMinutes(startTime, i * 30);
     slots.push({
-      id: `slot-${i + 1}-${currentDate.getTime()}`,
+      id: `slot-${i + 1}-${date.getTime()}`,
       dateTime: slotTime,
       isBooked: false,
     });
@@ -32,7 +33,10 @@ const generateInitialSlots = (currentDate: Date): AppointmentSlot[] => {
 
 
 export default function HomePage() {
-  const [currentDate, setCurrentDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [calendarDisplayMonth, setCalendarDisplayMonth] = useState<Date | undefined>(undefined);
+  const [minSelectableDate, setMinSelectableDate] = useState<Date | undefined>(undefined);
+  
   const [appointmentSlots, setAppointmentSlots] = useState<AppointmentSlot[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
@@ -44,11 +48,43 @@ export default function HomePage() {
 
   useEffect(() => {
     const today = new Date();
-    const startOfToday = setMilliseconds(setSeconds(setMinutes(setHours(today, 0), 0), 0), 0);
-    setCurrentDate(startOfToday);
-    setAppointmentSlots(generateInitialSlots(startOfToday));
+    setCalendarDisplayMonth(startOfDay(today));
+    setMinSelectableDate(startOfDay(today));
   }, []);
 
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      if (date.getDay() !== 6) { // Saturday is 6
+        toast({
+          title: "Invalid Date",
+          description: "Please select a Saturday.",
+          variant: "destructive",
+        });
+        setSelectedDate(undefined);
+        setAppointmentSlots([]);
+        setSelectedSlotId(null);
+        return;
+      }
+      if (minSelectableDate && date < minSelectableDate) {
+        toast({
+          title: "Invalid Date",
+          description: "Cannot select a past date.",
+          variant: "destructive",
+        });
+        setSelectedDate(undefined);
+        setAppointmentSlots([]);
+        setSelectedSlotId(null);
+        return;
+      }
+      setSelectedDate(date);
+      setAppointmentSlots(generateSlotsForDate(date));
+      setSelectedSlotId(null); // Reset selected slot when date changes
+    } else {
+      setSelectedDate(undefined);
+      setAppointmentSlots([]);
+      setSelectedSlotId(null);
+    }
+  };
 
   const selectedSlot = appointmentSlots.find(slot => slot.id === selectedSlotId);
 
@@ -75,7 +111,7 @@ export default function HomePage() {
     }
     setIsLoading(true);
     
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
 
     setAppointmentSlots(prevSlots =>
       prevSlots.map(slot =>
@@ -93,7 +129,7 @@ export default function HomePage() {
     };
     setBookings(prevBookings => [...prevBookings, newBooking].sort((a,b) => a.appointmentTime.getTime() - b.appointmentTime.getTime()));
 
-    setSelectedSlotId(null);
+    setSelectedSlotId(null); // Reset selected slot after booking
     setIsLoading(false);
     toast({ 
       title: "Booking Confirmed!", 
@@ -124,28 +160,56 @@ export default function HomePage() {
   return (
     <AppLayout>
       <div className="space-y-8 md:space-y-12">
-        {currentDate ? (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl flex items-center gap-2">
+              <CalendarIcon className="h-6 w-6 text-primary" />
+              Select a Day for the Meeting
+            </CardTitle>
+            <CardDescription>
+              Choose an available Saturday from the calendar below. Meetings can be booked for the current month and the next.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            {calendarDisplayMonth && minSelectableDate ? (
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateSelect}
+                month={calendarDisplayMonth}
+                onMonthChange={setCalendarDisplayMonth}
+                numberOfMonths={2}
+                disabled={(date: Date) => {
+                  return date.getDay() !== 6 || date < minSelectableDate;
+                }}
+                modifiers={{
+                  isSaturday: (date) => date.getDay() === 6,
+                }}
+                modifiersClassNames={{
+                  isSaturday: 'font-bold text-primary',
+                }}
+                className="rounded-md border"
+              />
+            ) : (
+               <div className="flex items-center justify-center p-10">
+                 <Clock className="h-5 w-5 mr-2 animate-spin text-primary" /> Loading calendar...
+               </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Separator />
+
+        {selectedDate && (
           <CalendarDisplay
             slots={appointmentSlots}
             selectedSlotId={selectedSlotId}
             onSlotSelect={handleSlotSelect}
-            currentDate={currentDate}
+            selectedDate={selectedDate} // Pass selectedDate here
           />
-        ) : (
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl flex items-center gap-2">
-                <Clock className="h-6 w-6 text-primary" />
-                Loading calendar...
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Initializing available slots...</p>
-            </CardContent>
-          </Card>
         )}
         
-        <Separator />
+        {selectedDate && <Separator />}
 
         <BookingForm
           selectedSlot={selectedSlot}
@@ -192,3 +256,4 @@ export default function HomePage() {
     </AppLayout>
   );
 }
+
