@@ -2,17 +2,15 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-// TODO: Replace with your app's Firebase project configuration
-// You can find this in your Firebase project settings:
-// Project settings > General > Your apps > Web app > Firebase SDK snippet > Config
+// Firebase project configuration provided by the user
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY", // REPLACE THIS
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com", // REPLACE THIS
-  projectId: "YOUR_PROJECT_ID", // REPLACE THIS
-  storageBucket: "YOUR_PROJECT_ID.appspot.com", // REPLACE THIS
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // REPLACE THIS
-  appId: "YOUR_APP_ID", // REPLACE THIS
-  measurementId: "YOUR_MEASUREMENT_ID" // Optional: REPLACE THIS
+  apiKey: "AIzaSyAYF6My8gAdwM-Ia86C-pgIp7lSNGmjOzA",
+  authDomain: "parent-meeting-booking.firebaseapp.com",
+  projectId: "parent-meeting-booking",
+  storageBucket: "parent-meeting-booking.firebasestorage.app", // Corrected from .appspot.com if necessary, usually .appspot.com is for default bucket
+  messagingSenderId: "163896530776",
+  appId: "1:163896530776:web:cfe72657d5a38db757b72d"
+  // measurementId is optional, so it's fine if not provided
 };
 
 let app: FirebaseApp;
